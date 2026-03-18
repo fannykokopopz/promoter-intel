@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BA Intelligence Dashboard — TC Acoustic SG</title>
+<style>
+  :root {
+    --bg: #f4f3ef;
+    --surface: #ffffff;
+    --surface2: #f9f8f5;
+    --border: #e8e6e0;
+    --text-primary: #1a1a1a;
+    --text-secondary: #6b6b6b;
+    --text-tertiary: #9a9a9a;
+    --green: #2d9e5f;
+    --green-bg: #eaf7f0;
+    --orange: #e07b2a;
+    --orange-bg: #fdf1e5;
+    --red: #d94040;
+    --red-bg: #fdeaea;
+    --blue: #2563eb;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow-hover: 0 4px 12px rgba(0,0,0,0.10), 0 8px 32px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text-primary); font-size: 14px; line-height: 1.5; }
+
+  .header { background: var(--text-primary); color: white; padding: 28px 40px 24px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  .header-left h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.4px; margin-bottom: 4px; }
+  .header-left p { font-size: 13px; color: rgba(255,255,255,0.5); }
+  .header-meta { display: flex; gap: 28px; align-items: flex-end; flex-wrap: wrap; }
+  .header-stat .val { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; line-height: 1; margin-bottom: 2px; }
+  .header-stat .lbl { font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; }
+  .header-stat .val.green { color: #4ade80; }
+  .header-stat .val.orange { color: #fb923c; }
+
+  .subnav { background: white; border-bottom: 1px solid var(--border); padding: 0 40px; display: flex; position: sticky; top: 0; z-index: 100; overflow-x: auto; }
+  .subnav button { background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500; color: var(--text-secondary); padding: 14px 18px 12px; transition: all 0.15s; white-space: nowrap; }
+  .subnav button:hover { color: var(--text-primary); }
+  .subnav button.active { color: var(--text-primary); border-bottom-color: var(--text-primary); font-weight: 600; }
+
+  .main { padding: 32px 40px; max-width: 1400px; }
+  .section { margin-bottom: 36px; }
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-tertiary); margin-bottom: 14px; }
+
+  .weeks-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  @media(max-width: 1200px) { .weeks-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media(max-width: 700px) { .weeks-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .week-card { background: var(--surface); border-radius: var(--radius); padding: 16px 18px; border: 1px solid var(--border); cursor: pointer; transition: all 0.15s; }
+  .week-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+  .week-card.selected { border-color: var(--text-primary); box-shadow: 0 0 0 1.5px var(--text-primary); }
+  .wk-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .wk-label { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-tertiary); }
+  .badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; line-height: 1.6; }
+  .badge.green { background: var(--green-bg); color: var(--green); }
+  .badge.orange { background: var(--orange-bg); color: var(--orange); }
+  .badge.red { background: var(--red-bg); color: var(--red); }
+  .sales-actual { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1; margin-bottom: 2px; }
+  .sales-target { font-size: 12px; color: var(--text-tertiary); margin-bottom: 10px; }
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 10px; }
+  .progress-fill { height: 100%; border-radius: 2px; }
+  .progress-fill.green { background: var(--green); }
+  .progress-fill.orange { background: var(--orange); }
+  .progress-fill.red { background: var(--red); }
+  .metrics-row { display: flex; gap: 12px; }
+  .metric .mv { font-size: 13px; font-weight: 600; }
+  .metric .ml { font-size: 11px; color: var(--text-tertiary); margin-top: 1px; }
+
+  .chart-wrapper { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 24px; }
+  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+  .chart-title { font-size: 15px; font-weight: 600; }
+  .chart-legend { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; }
+  .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+  .chart-svg-wrap { overflow-x: auto; }
+
+  .channel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .channel-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 18px 20px; }
+  .channel-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+  .channel-week-row { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; }
+  .cwk { color: var(--text-tertiary); width: 22px; flex-shrink: 0; font-weight: 600; }
+  .cbar-wrap { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .cbar { height: 100%; border-radius: 3px; }
+  .cval { width: 65px; text-align: right; font-weight: 500; font-size: 11px; }
+  .cpct { width: 34px; text-align: right; font-size: 10px; font-weight: 600; }
+
+  .lb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width: 800px) { .lb-grid { grid-template-columns: 1fr; } }
+  .lb-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+  .lb-header { padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+  .lb-header .sub { font-size: 11px; color: var(--text-tertiary); font-weight: 400; }
+  .lb-row { padding: 11px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row:hover { background: var(--surface2); }
+  .lb-rank { width: 22px; height: 22px; border-radius: 50%; background: var(--text-primary); color: white; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .lb-rank.gold { background: #c8960c; }
+  .lb-rank.silver { background: #7a7a7a; }
+  .lb-rank.bronze { background: #9c6b3e; }
+  .lb-name { flex: 1; font-size: 13px; font-weight: 500; }
+  .lb-store { font-size: 11px; color: var(--text-tertiary); }
+  .lb-value { font-size: 13px; font-weight: 700; text-align: right; }
+
+  .detail-panel { display: none; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 28px; margin-top: 14px; animation: fadeIn 0.2s ease; }
+  .detail-panel.visible { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .detail-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 22px; gap: 16px; flex-wrap: wrap; }
+  .detail-title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 3px; }
+  .detail-subtitle { font-size: 13px; color: var(--text-secondary); }
+  .detail-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 22px; }
+  @media(max-width: 800px) { .detail-stats { grid-template-columns: repeat(2, 1fr); } }
+  .detail-stat { background: var(--surface2); border-radius: var(--radius-sm); padding: 14px 16px; border: 1px solid var(--border); }
+  .detail-stat .ds-val { font-size: 19px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 2px; }
+  .detail-stat .ds-lbl { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; }
+  .detail-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media(max-width: 700px) { .detail-cols { grid-template-columns: 1fr; } }
+  .detail-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-tertiary); margin-bottom: 10px; }
+  .store-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .store-row:last-child { border-bottom: none; }
+  .store-rank { color: var(--text-tertiary); font-size: 11px; margin-right: 8px; width: 18px; flex-shrink: 0; }
+  .store-name { flex: 1; }
+  .store-val { font-weight: 600; font-size: 12px; }
+  .zero-duty-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .zero-chip { font-size: 11px; background: var(--red-bg); color: var(--red); padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+
+  .brief-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius-sm); padding: 16px 18px; position: relative; margin-top: 18px; }
+  .brief-box h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #0369a1; margin-bottom: 8px; }
+  .brief-text { font-size: 12px; line-height: 1.75; color: var(--text-primary); white-space: pre-wrap; font-family: 'SF Mono', 'Fira Code', monospace; }
+  .copy-btn { position: absolute; top: 12px; right: 12px; background: var(--blue); color: white; border: none; border-radius: 6px; padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
+  .copy-btn:hover { opacity: 0.85; }
+
+  .insights-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media(max-width: 1000px) { .insights-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media(max-width: 640px) { .insights-grid { grid-template-columns: 1fr; } }
+  .insight-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 18px 20px; }
+  .insight-icon { font-size: 18px; margin-bottom: 10px; }
+  .insight-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; line-height: 1.4; }
+  .insight-body { font-size: 12px; color: var(--text-secondary); line-height: 1.65; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .filter-row { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; align-items: center; }
+  .filter-lbl { font-size: 11px; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; }
+  .filter-btn { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 5px 11px; font-size: 12px; font-weight: 500; color: var(--text-secondary); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .filter-btn:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+  .filter-btn.active { background: var(--text-primary); border-color: var(--text-primary); color: white; font-weight: 600; }
+
+  .summary-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 28px; }
+  @media(max-width: 1000px) { .summary-bar { grid-template-columns: repeat(3, 1fr); } }
+  @media(max-width: 640px) { .summary-bar { grid-template-columns: repeat(2, 1fr); } }
+  .sum-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 16px 18px; }
+  .sum-card .sv { font-size: 22px; font-weight: 800; letter-spacing: -0.8px; line-height: 1; margin-bottom: 4px; }
+  .sum-card .sl { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; }
+  .sum-card .sd { font-size: 12px; margin-top: 4px; font-weight: 500; }
+  .divider { height: 1px; background: var(--border); margin: 28px 0; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d0cfc9; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Brand Ambassador Intelligence Dashboard</h1>
+    <p>TC Acoustic · Singapore · Q1 W1–W10 · 6 Jan – 16 Mar 2025</p>
+  </div>
+  <div class="header-meta">
+    <div class="header-stat">
+      <div class="val green">$743,409</div>
+      <div class="lbl">Total Sales W1–W10</div>
+    </div>
+    <div class="header-stat">
+      <div class="val orange">84.4%</div>
+      <div class="lbl">Avg Attainment</div>
+    </div>
+    <div class="header-stat">
+      <div class="val">$134.67</div>
+      <div class="lbl">Avg Effectiveness $/hr</div>
+    </div>
+  </div>
+</div>
+
+<div class="subnav">
+  <button class="active" onclick="showTab('overview',this)">Overview</button>
+  <button onclick="showTab('weekly',this)">Weekly Breakdown</button>
+  <button onclick="showTab('channels',this)">Channel Performance</button>
+  <button onclick="showTab('promoters',this)">Promoter Leaderboard</button>
+  <button onclick="showTab('insights',this)">Insights &amp; Actions</button>
+</div>
+
+<div class="main">
+
+  <!-- OVERVIEW -->
+  <div id="tab-overview" class="tab-content active">
+    <div class="section">
+      <div class="section-title">10-Week Campaign Summary</div>
+      <div class="summary-bar">
+        <div class="sum-card"><div class="sv">$743k</div><div class="sl">Total Revenue</div><div class="sd" style="color:var(--green)">W1–W10 Cumulative</div></div>
+        <div class="sum-card"><div class="sv">84.4%</div><div class="sl">Avg Attainment</div><div class="sd" style="color:var(--orange)">4 of 10 weeks ≥100%</div></div>
+        <div class="sum-card"><div class="sv">$144k</div><div class="sl">Peak Week</div><div class="sd" style="color:var(--text-secondary)">W4 — Taka activation</div></div>
+        <div class="sum-card"><div class="sv">$134.67</div><div class="sl">Avg $/hr</div><div class="sd" style="color:var(--green)">Above baseline 7/10 wks</div></div>
+        <div class="sum-card"><div class="sv">5,813hr</div><div class="sl">Total Hours</div><div class="sd" style="color:var(--text-secondary)">Across all channels</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Weekly Performance — Click to Expand</div>
+      <div class="weeks-grid" id="weeks-grid"></div>
+      <div id="detail-panel" class="detail-panel"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">10-Week Sales Trend</div>
+      <div class="chart-wrapper">
+        <div class="chart-header">
+          <div class="chart-title">Actual vs Target — Weekly Sales</div>
+          <div class="chart-legend">
+            <span><span class="legend-dot" style="background:#1a1a1a"></span>Actual</span>
+            <span><span class="legend-dot" style="background:#c8c7c0"></span>Target</span>
+            <span><span class="legend-dot" style="background:#2d9e5f"></span>Effectiveness $/hr</span>
+          </div>
+        </div>
+        <div class="chart-svg-wrap">
+          <svg id="trendChart" width="100%" viewBox="0 0 900 220" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WEEKLY BREAKDOWN -->
+  <div id="tab-weekly" class="tab-content">
+    <div class="section">
+      <div class="section-title">Drill Down by Week</div>
+      <div class="filter-row" id="week-filters"><span class="filter-lbl">Week</span></div>
+      <div id="weekly-detail-view"></div>
+    </div>
+  </div>
+
+  <!-- CHANNEL PERFORMANCE -->
+  <div id="tab-channels" class="tab-content">
+    <div class="section">
+      <div class="section-title">Channel Performance — W1 to W10</div>
+      <div class="channel-grid" id="channel-grid"></div>
+    </div>
+  </div>
+
+  <!-- PROMOTER LEADERBOARD -->
+  <div id="tab-promoters" class="tab-content">
+    <div class="section">
+      <div class="section-title">Promoter Performance by Week</div>
+      <div class="filter-row" id="promoter-filters"><span class="filter-lbl">Week</span></div>
+      <div class="lb-grid" id="promoter-lb"></div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div id="tab-insights" class="tab-content">
+    <div class="section">
+      <div class="section-title">Strategic Intelligence — Q1 W1–W10</div>
+      <div class="insights-grid" id="insights-grid"></div>
+    </div>
+    <div class="divider"></div>
+    <div class="section">
+      <div class="section-title">Pre-Meeting Brief — For Account Managers</div>
+      <div class="brief-box">
+        <h4>AM Pre-Call Brief · TC Acoustic SG · Q1 W1–W10</h4>
+        <button class="copy-btn" onclick="copyBrief(event)">Copy Brief</button>
+        <div class="brief-text" id="am-brief"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const weeks = [
+  { id:'W1', day:'Sun', sales:75509, target:73000, pct:103, hoursActual:592, hoursTarget:632, effActual:127.52, effTarget:115.51, prevDaySales:24551, prevDayTarget:20000, prevDayPct:123, prevDayHours:111, prevDayEff:220.68,
+    channels:{challenger:[35992,22000],harvey:[27069,20000],courts:[1926,13000],taka:[10522,18000]},
+    topStores:[{name:'Harvey Norman @ Millenia Walk',val:'$884/hr'},{name:'Harvey Norman @ Parkway Parade',val:'$524.60/hr'},{name:'Challenger @ NEX',val:'$421.20/hr'}],
+    topSales:[{name:'Samantha Lim',loc:'HN MW',val:'$4,946'},{name:'Zachary Cheong',loc:'Taka FD',val:'$3,765'},{name:'Damien Wong',loc:'HN PP FD',val:'$2,623'}],
+    topEff:[{name:'Damien Wong',loc:'HN PP FD',val:'$524.60/hr'},{name:'Lionel Khoo',loc:'CH NEX PM',val:'$421.20/hr'},{name:'Erica Tan',loc:'CH Bugis FD',val:'$373.40/hr'}],
+    zeroDuty:['Wei Sue Saw – CH JEM AM','James Koh – CH Vivo FD','Chan Chu Yu – CMS AM','Javier Law – CMS PM','Ashton Heng – Heeren AM','Kayes Tan – Heeren PM','Grace Tan – HN WG PM'],
+    notes:'W1 opened at 103% — strong start. HN Millenia Walk led at $884/hr. 7 promoters on zero duty. Effectiveness well above $115.51 target at $127.52/hr.' },
+  { id:'W2', day:'Sun', sales:50294, target:65000, pct:51, hoursActual:539, hoursTarget:632, effActual:93.36, effTarget:115.51, prevDaySales:16796, prevDayTarget:18000, prevDayPct:93, prevDayHours:107, prevDayEff:157.27,
+    channels:{challenger:[16793,22000],harvey:[20581,20000],courts:[2415,13000],taka:[10505,10000]},
+    topStores:[{name:'Challenger @ Vivocity',val:'$287.53/hr'},{name:'Courts @ Megastore',val:'$231.41/hr'},{name:'Challenger @ Causeway Point',val:'$177.95/hr'}],
+    topSales:[{name:'Javier Law',loc:'Taka FD',val:'$5,983'},{name:'Kayes Tan',loc:'CH Vivo FD',val:'$2,444'},{name:'Alexander Chia',loc:'CMS FD',val:'$1,967'}],
+    topEff:[{name:'Javier Law',loc:'Taka FD',val:'$543.91/hr'},{name:'Kayes Tan',loc:'CH Vivo FD',val:'$287.53/hr'},{name:'Alexander Chia',loc:'CMS FD',val:'$231.41/hr'}],
+    zeroDuty:['Kynan Lim – CH Bugis AM','Mindy Ong – CH JP PM','Ong Li Ying – CH NEX AM','Erica Tan – CH NEX PM','Eugene Tan – HN NP FD'],
+    notes:'W2 mid-week snapshot at 51% — major shortfall vs $65k. Effectiveness dipped below benchmark. Courts at $2,415 vs $13k target — critical underperformance. Javier Law standout with $5,983 and $543.91/hr.' },
+  { id:'W3', day:'Sat', sales:45278, target:72000, pct:62, hoursActual:494, hoursTarget:531, effActual:91.72, effTarget:135.59, prevDaySales:9796, prevDayTarget:21000, prevDayPct:47, prevDayHours:94, prevDayEff:104.21,
+    channels:{challenger:[18647,22000],harvey:[14699,20000],courts:[3742,13000],taka:[8190,17000]},
+    topStores:[{name:'Courts @ Megastore',val:'$258.24/hr'},{name:'Harvey Norman @ West Gate',val:'$150.40/hr'},{name:'Challenger @ Causeway Point',val:'$139.78/hr'}],
+    topSales:[{name:'Javier Law',loc:'CMS',val:'$2,195'},{name:'Lionel Khoo',loc:'Taka',val:'$1,177'},{name:'Erica Tan',loc:'CH Bugis',val:'$1,067'}],
+    topEff:[{name:'Javier Law',loc:'CMS',val:'$258.24/hr'},{name:'Andre Teo',loc:'CH NEX',val:'$256.29/hr'},{name:'Ong Li Ying',loc:'HN West Gate',val:'$166.33/hr'}],
+    zeroDuty:['Nicholas Chia – CH @ NEX','Eugene Tan – HN @ Millenia Walk','Abigail Goh – CH @ JEM','Jaelynn Fock – CH @ Jurong Point'],
+    notes:'W3 Saturday snapshot — 62% vs $72k. Yesterday (Sat) only 47% of daily target. Effectiveness $91.72 vs high $135.59 target. HN underperforming ($14,699 vs $20k). Javier Law and Andre Teo showing consistent efficiency.' },
+  { id:'W4', day:'Sun', sales:144049, target:165000, pct:87, hoursActual:698, hoursTarget:592, effActual:205.86, effTarget:279, prevDaySales:55324, prevDayTarget:60000, prevDayPct:92, prevDayHours:157, prevDayEff:352.38,
+    channels:{challenger:[24113,22000],harvey:[17243,20000],courts:[6589,13000],taka:[96104,110000]},
+    topStores:[{name:'Takashimaya @ Ngee Ann City',val:'$1,033.83/hr'},{name:'Harvey Norman @ Millenia Walk',val:'$466.49/hr'},{name:'Courts @ Megastore',val:'$317.41/hr'}],
+    topSales:[{name:'Javier Law',loc:'Takashimaya',val:'$18,941'},{name:'Rui Sian Chong',loc:'Takashimaya',val:'$18,193'},{name:'Lionel Khoo',loc:'Takashimaya',val:'$4,643'}],
+    topEff:[{name:'Javier Law',loc:'Takashimaya',val:'$1,515.28/hr'},{name:'Rui Sian Chong',loc:'Takashimaya',val:'$1,399.46/hr'},{name:'Edric Koh',loc:'HN Millenia Walk',val:'$466.49/hr'}],
+    zeroDuty:['Nicholas Chia','Adena Moo','Grace Tan','Shi Xuan Teo','Mindy Ong','Jerlyn Cheng','Erica Tan','Andrew Burke','James Koh','Genista Tan','Eugene Tan'],
+    notes:'W4 — Takashimaya activation dominated. Taka alone: $96k vs $110k target. Javier Law $18,941 and Rui Sian Chong $18,193. Campaign peak efficiency: $1,515/hr. 11 zero-duty promoters = full resource concentration at event.' },
+  { id:'W5', day:'Sun', sales:87283, target:73000, pct:120, hoursActual:604.3, hoursTarget:540, effActual:144, effTarget:135, prevDaySales:30719, prevDayTarget:18000, prevDayPct:171, prevDayHours:115, prevDayEff:267,
+    channels:{challenger:[25969,22000],harvey:[30092,20000],courts:[0,13000],taka:[14133,18000],sprint:[4084,5000]},
+    topStores:[{name:'Harvey Norman @ Millenia Walk',val:'$485.37/hr'},{name:'Sprint Cass @ T2',val:'$301.88/hr'},{name:'Challenger @ JEM',val:'$205.03/hr'}],
+    topSales:[{name:'George Sim',loc:'HN @ Parkway Parade',val:'$4,247'},{name:'Zhi Yu Goh',loc:'Taka @ Ngee Ann City',val:'$3,405'},{name:'Wei Sue Saw',loc:'Taka @ Ngee Ann City',val:'$2,765'}],
+    topEff:[{name:'Zhi Yu Goh',loc:'HN Millenia Walk',val:'$648.57/hr'},{name:'George Sim',loc:'HN @ Parkway Parade',val:'$485.37/hr'},{name:'Wei Sue Saw',loc:'Taka @ Ngee Ann City',val:'$425.38/hr'}],
+    zeroDuty:['Kerrine Koh','Andre Teo','Jaelynn Fock','Thaddeus Tan','Adena Moo','ShanHe Wu'],
+    notes:'W5 strong rebound at 120%. Sunday exceptional at 171% ($30,719 vs $18k). Courts $0 — complete outage. Sprint Cass activated at T2. HN Millenia Walk anchoring effectiveness.' },
+  { id:'W6', day:'Sun', sales:87038, target:116500, pct:75, hoursActual:717.35, hoursTarget:626, effActual:121.33, effTarget:186, prevDaySales:20291, prevDayTarget:30000, prevDayPct:67, prevDayHours:135, prevDayEff:150.30,
+    channels:{challenger:[20123,25000],harvey:[42478,62000],courts:[179,11500],taka:[12945,18000],sprint:[11313,15000]},
+    topStores:[{name:'Harvey Norman @ Millenia Walk',val:'$514.43/hr'},{name:'Harvey Norman @ Parkway Parade',val:'$370.22/hr'},{name:'Harvey Norman @ West Gate',val:'$279.73/hr'}],
+    topSales:[{name:'George Sim',loc:'HN @ Parkway Parade',val:'$3,332'},{name:'Ong Li Ying',loc:'HN @ West Gate',val:'$2,098'},{name:'Zachary Cheong',loc:'Taka @ Ngee Ann City',val:'$1,498'}],
+    topEff:[{name:'Ong Li Ying',loc:'HN @ West Gate',val:'$699.33/hr'},{name:'George Sim',loc:'HN @ Parkway Parade',val:'$370.22/hr'},{name:'Alexander Chia',loc:'TCASG Showroom',val:'$307.33/hr'}],
+    zeroDuty:['Erica Tan','Andre Teo','ShanHe Wu','Nicholas Chia','Jayden Ng','ZI HONG LOW','Wei Sue Saw','Kenzo Lee','Genista Tan','Chan Chu Yu','Liang Zuan Loy'],
+    notes:'W6 — $87k vs $116.5k (75%). Highest HN week: $42,478. Courts at $179 — essentially zero. 11 zero-duty promoters. Effectiveness $121 vs $186 target — significant deployment efficiency gap.' },
+  { id:'W7', day:'Sun', sales:84673, target:93000, pct:91, hoursActual:670.2, hoursTarget:586, effActual:126.34, effTarget:133, prevDaySales:28111, prevDayTarget:20000, prevDayPct:141, prevDayHours:124, prevDayEff:226.61,
+    channels:{challenger:[23446,25000],harvey:[13716,22000],courts:[4432,13000],taka:[9646,18000],sprint:[10484,15000]},
+    topStores:[{name:'Harvey Norman @ Millenia Walk',val:'$415.37/hr'},{name:'Harvey Norman @ Northpoint',val:'$409.76/hr'},{name:'Challenger @ Causeway Point',val:'$361.63/hr'}],
+    topSales:[{name:'(Store Total) HN @ Millenia Walk',loc:'',val:'$3,946'},{name:'Damien Wong',loc:'HN @ Northpoint',val:'$3,483'},{name:'Genista Tan',loc:'CH @ Causeway Point',val:'$2,194'}],
+    topEff:[{name:'Jerlyn Cheng',loc:'HN Millenia Walk',val:'$789.20/hr'},{name:'Damien Wong',loc:'HN @ Northpoint',val:'$409.76/hr'},{name:'Genista Tan',loc:'CH @ Causeway Point',val:'$274.25/hr'}],
+    zeroDuty:['Erica Tan','Douglas Ho','Joelle Lim','George Sim','ShanHe Wu','Andre Teo'],
+    notes:'W7 at 91%. Sunday strong at 141%. Jerlyn Cheng standout at $789.20/hr. HN WTD needs attention ($13,716 vs $22k). Challenger and Sprint trending positively.' },
+  { id:'W8', day:'Sun', sales:38962, target:47500, pct:82, hoursActual:404.4, hoursTarget:368.5, effActual:96.35, effTarget:133, prevDaySales:9829, prevDayTarget:13000, prevDayPct:76, prevDayHours:99.5, prevDayEff:98.78,
+    channels:{challenger:[13703,11000],harvey:[6068,11000],courts:[0,7500],taka:[8633,8000],sprint:[10558,10000]},
+    topStores:[{name:'Challenger @ NEX',val:'$224.00/hr'},{name:'Harvey Norman @ Parkway Parade',val:'$125.65/hr'},{name:'Challenger @ Vivocity',val:'$119.76/hr'}],
+    topSales:[{name:'Lionel Khoo',loc:'Sprint Cass @ T2',val:'$3,036'},{name:'Kynan Lim',loc:'Challenger @ NEX',val:'$1,157'},{name:'Damien Wong',loc:'HN @ Parkway Parade',val:'$1,068'}],
+    topEff:[{name:'Lionel Khoo',loc:'Sprint Cass @ T2',val:'$357.18/hr'},{name:'Kynan Lim',loc:'Challenger @ NEX',val:'$289.25/hr'},{name:'Jaelynn Fock',loc:'Challenger @ JEM',val:'$224.75/hr'}],
+    zeroDuty:['Keanne Lim','Hannah Koh','Maximus Lim','Adena Moo','Mindy Ong','Chan Chu Yu','Joelle Lim','Gregory Lee'],
+    notes:'W8 — reduced deployment week. Courts $0 again. HN severely weak ($6,068 vs $11k). Lionel Khoo carrying Sprint Cass at $3,036/$357/hr. Lowest effective sales rate at $96.35/hr.' },
+  { id:'W9', day:'Sun', sales:43797, target:77000, pct:57, hoursActual:584.6, hoursTarget:531, effActual:75.23, effTarget:117, prevDaySales:6620, prevDayTarget:15000, prevDayPct:56, prevDayHours:106.8, prevDayEff:61.99,
+    channels:{challenger:[13555,20000],harvey:[7573,21000],courts:[1406,6000],taka:[6303,15000],sprint:[14960,15000]},
+    topStores:[{name:'Harvey Norman @ Parkway Parade',val:'$129.56/hr'},{name:'Challenger @ Bugis B1',val:'$96.24/hr'},{name:'Courts @ The Heeren',val:'$89.20/hr'}],
+    topSales:[{name:'Edric Koh',loc:'HN @ Parkway Parade',val:'$1,166'},{name:'Eugene Tan',loc:'Taka @ Ngee Ann City',val:'$1,097'},{name:'Sherise Ying',loc:'CH @ Bugis B1',val:'$818'}],
+    topEff:[{name:'Ong Li Ying',loc:'HN West Gate',val:'$166.33/hr'},{name:'Edric Koh',loc:'HN @ Parkway Parade',val:'$129.56/hr'},{name:'Sherise Ying',loc:'CH @ Bugis B1',val:'$96.24/hr'}],
+    zeroDuty:['Grace Tan','Mindy Ong','James Koh','Kerrine Koh','Justin Ang','Kayes Tan'],
+    notes:'W9 — campaign low at 57% / $75.23/hr (vs $117 target). Sprint Cass near target ($14,960/$15k) — only bright spot. Sunday $6,620 vs $15k at $61.99/hr. Full team intervention needed.' },
+  { id:'W10', day:'Sun', sales:82536, target:74000, pct:112, hoursActual:503.4, hoursTarget:531, effActual:163.96, effTarget:139, prevDaySales:29372, prevDayTarget:18000, prevDayPct:163, prevDayHours:93.75, prevDayEff:313.30,
+    channels:{challenger:[19681,22000],harvey:[48707,31000],courts:[2576,6000],taka:[10435,15000],sprint:[1127,0]},
+    topStores:[{name:'Harvey Norman @ Millenia Walk',val:'$1,682.71/hr'},{name:'Harvey Norman @ Parkway Parade',val:'$307.56/hr'},{name:'Harvey Norman @ West Gate',val:'$293.38/hr'}],
+    topSales:[{name:'Eugene Tan',loc:'HN @ Millenia Walk',val:'$14,303'},{name:'James Koh',loc:'HN @ Parkway Parade',val:'$2,768'},{name:'Chan Chu Yu',loc:'HN @ West Gate',val:'$2,347'}],
+    topEff:[{name:'Eugene Tan',loc:'HN @ Millenia Walk',val:'$1,682.71/hr'},{name:'James Koh',loc:'HN @ Parkway Parade',val:'$307.56/hr'},{name:'Chan Chu Yu',loc:'HN @ West Gate',val:'$293.38/hr'}],
+    zeroDuty:['Joelle Lim','Kynan Lim','Douglas Ho','Thaddeus Tan','Adena Moo','Kayden Fang'],
+    notes:'W10 — recovery at 112%. HN massive activation: $48,707 vs $31k (157%). Eugene Tan campaign record: $14,303 at $1,682.71/hr. Sunday 163% of daily target. Strong close to Q1.' },
+];
+
+function fmtK(v){if(v>=1000)return'$'+(v/1000).toFixed(v>=10000?0:1)+'k';return'$'+v;}
+function colorClass(p){return p>=100?'green':p>=75?'orange':'red';}
+function cap(p){return Math.min(p,100);}
+
+function buildWeekCards(){
+  const g=document.getElementById('weeks-grid');g.innerHTML='';
+  weeks.forEach((w,i)=>{
+    const cc=colorClass(w.pct);
+    const d=document.createElement('div');
+    d.className='week-card';d.dataset.idx=i;
+    d.onclick=()=>toggleDetail(i,d);
+    d.innerHTML=`<div class="wk-header"><span class="wk-label">${w.id}</span><span class="badge ${cc}">${w.pct}%</span></div>
+    <div class="sales-actual">${fmtK(w.sales)}</div>
+    <div class="sales-target">vs ${fmtK(w.target)} target</div>
+    <div class="progress-bar"><div class="progress-fill ${cc}" style="width:${cap(w.pct)}%"></div></div>
+    <div class="metrics-row"><div class="metric"><div class="mv">$${w.effActual}/hr</div><div class="ml">Effectiveness</div></div><div class="metric"><div class="mv">${w.hoursActual}hr</div><div class="ml">Deployed</div></div></div>`;
+    g.appendChild(d);
+  });
+}
+
+function toggleDetail(idx,card){
+  const p=document.getElementById('detail-panel');
+  const all=document.querySelectorAll('.week-card');
+  if(card.classList.contains('selected')){card.classList.remove('selected');p.classList.remove('visible');return;}
+  all.forEach(c=>c.classList.remove('selected'));card.classList.add('selected');
+  p.classList.add('visible');p.innerHTML=buildDetailHTML(weeks[idx]);
+}
+
+function buildDetailHTML(w){
+  const cc=colorClass(w.pct);
+  const pdcc=colorClass(w.prevDayPct);
+  const storeRows=w.topStores.map((s,i)=>`<div class="store-row"><span class="store-rank">#${i+1}</span><span class="store-name">${s.name}</span><span class="store-val">${s.val}</span></div>`).join('');
+  const salesRows=w.topSales.map((s,i)=>`<div class="lb-row"><div class="lb-rank ${i===0?'gold':i===1?'silver':'bronze'}">${i+1}</div><div><div class="lb-name">${s.name}</div><div class="lb-store">${s.loc}</div></div><div class="lb-value">${s.val}</div></div>`).join('');
+  const effRows=w.topEff.map((s,i)=>`<div class="lb-row"><div class="lb-rank ${i===0?'gold':i===1?'silver':'bronze'}">${i+1}</div><div><div class="lb-name">${s.name}</div><div class="lb-store">${s.loc}</div></div><div class="lb-value">${s.val}</div></div>`).join('');
+  const chips=w.zeroDuty.map(n=>`<span class="zero-chip">${n}</span>`).join('');
+  const brief=genBrief(w);
+  const effColor=w.effActual>=w.effTarget?'var(--green)':w.effActual>=w.effTarget*0.75?'var(--orange)':'var(--red)';
+  return `
+    <div class="detail-header">
+      <div><div class="detail-title">${w.id} — Week to Date</div><div class="detail-subtitle">Snapshot: ${w.id} ${w.day} · Singapore</div></div>
+      <span class="badge ${cc}" style="font-size:14px;padding:5px 14px">${w.pct}% of target</span>
+    </div>
+    <div class="detail-stats">
+      <div class="detail-stat"><div class="ds-val">${fmtK(w.sales)}</div><div class="ds-lbl">WTD Sales vs ${fmtK(w.target)}</div></div>
+      <div class="detail-stat"><div class="ds-val" style="color:${w.prevDayPct>=100?'var(--green)':w.prevDayPct>=75?'var(--orange)':'var(--red)'}">${fmtK(w.prevDaySales)}</div><div class="ds-lbl">Yesterday · ${w.prevDayPct}% of ${fmtK(w.prevDayTarget)}</div></div>
+      <div class="detail-stat"><div class="ds-val" style="color:${effColor}">$${w.effActual}/hr</div><div class="ds-lbl">Effectiveness vs $${w.effTarget} target</div></div>
+      <div class="detail-stat"><div class="ds-val">${w.hoursActual}hr</div><div class="ds-lbl">Hours Deployed vs ${w.hoursTarget} planned</div></div>
+    </div>
+    <div class="detail-cols">
+      <div>
+        <div class="detail-section-title">Top 3 Performing Stores</div>${storeRows}
+        <div style="margin-top:20px"><div class="detail-section-title">Promoters with 0 Sales Duty (${w.zeroDuty.length})</div><div class="zero-duty-list">${chips}</div></div>
+      </div>
+      <div>
+        <div class="detail-section-title">Top Sales</div>
+        <div style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:16px">${salesRows}</div>
+        <div class="detail-section-title">Top Efficiency</div>
+        <div style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden">${effRows}</div>
+      </div>
+    </div>
+    <div class="brief-box" style="margin-top:20px">
+      <h4>AM Pre-Meeting Brief — ${w.id}</h4>
+      <button class="copy-btn" onclick="copyBriefWeek(event,'${w.id}')">Copy Brief</button>
+      <div class="brief-text" id="brief-${w.id}">${brief}</div>
+    </div>`;
+}
+
+function genBrief(w){
+  const cc=w.pct>=100?'🟢 ON TARGET':w.pct>=75?'🟠 BELOW TARGET':'🔴 SIGNIFICANTLY OFF TARGET';
+  const ef=w.effActual>=w.effTarget?'✅ Above target':'⚠️ Below target';
+  const ch=w.channels;
+  const chLines=[];
+  if(ch.challenger)chLines.push(`  Challenger:      ${fmtK(ch.challenger[0])} / ${fmtK(ch.challenger[1])} (${Math.round(ch.challenger[0]/ch.challenger[1]*100)}%)`);
+  if(ch.harvey)chLines.push(`  Harvey Norman:   ${fmtK(ch.harvey[0])} / ${fmtK(ch.harvey[1])} (${Math.round(ch.harvey[0]/ch.harvey[1]*100)}%)`);
+  if(ch.courts)chLines.push(`  Courts:          ${fmtK(ch.courts[0])} / ${fmtK(ch.courts[1])} (${Math.round(ch.courts[0]/ch.courts[1]*100)}%)`);
+  if(ch.taka)chLines.push(`  Takashimaya:     ${fmtK(ch.taka[0])} / ${fmtK(ch.taka[1])} (${Math.round(ch.taka[0]/ch.taka[1]*100)}%)`);
+  if(ch.sprint)chLines.push(`  Sprint Cass:     ${fmtK(ch.sprint[0])} / ${fmtK(ch.sprint[1])} (${ch.sprint[1]>0?Math.round(ch.sprint[0]/ch.sprint[1]*100)+'%':'N/A'})`);
+  const tp=w.topSales[0];const ts=w.topStores[0];
+  const actions=[];
+  if(w.pct<75)actions.push('• 🚨 Week significantly off-target — escalate to CM, review deployment plan immediately');
+  else if(w.pct<100)actions.push('• 📋 Below target — identify gaps, push remaining days');
+  else actions.push('• ✅ On/above target — share winning tactics with wider team');
+  if(w.effActual<w.effTarget)actions.push(`• Effectiveness gap ($${w.effActual} vs $${w.effTarget}/hr) — review shift scheduling and low-performer coverage`);
+  if(w.zeroDuty.length>6)actions.push(`• High zero-duty count (${w.zeroDuty.length}) — verify if planned rotation or coverage gap`);
+  if(ch.courts&&ch.courts[0]<500)actions.push('• Courts near-zero — confirm BA presence and product availability on shelf');
+  return`TC Acoustic SG — ${w.id} Performance Brief
+
+${cc}
+Sales:           ${fmtK(w.sales)} / ${fmtK(w.target)} (${w.pct}%)
+Effectiveness:   $${w.effActual}/hr vs $${w.effTarget}/hr target (${ef})
+Hours deployed:  ${w.hoursActual}hr vs ${w.hoursTarget}hr planned
+Yesterday:       ${fmtK(w.prevDaySales)} / ${fmtK(w.prevDayTarget)} (${w.prevDayPct}%) at $${w.prevDayEff}/hr
+
+CHANNEL BREAKDOWN:
+${chLines.join('\n')}
+
+TOP PERFORMING STORE:
+  → ${ts.name} at ${ts.val}
+
+STANDOUT PROMOTER:
+  → ${tp.name}${tp.loc?' ('+tp.loc+')':''} — ${tp.val}
+
+PROMOTERS WITH 0 SALES DUTY (${w.zeroDuty.length}):
+  → ${w.zeroDuty.join(', ')}
+
+AM ACTION ITEMS:
+${actions.join('\n')}
+
+CONTEXT NOTE:
+${w.notes}`;
+}
+
+function copyBriefWeek(e,id){
+  const el=document.getElementById('brief-'+id);if(!el)return;
+  navigator.clipboard.writeText(el.innerText).then(()=>{const b=e.target;b.textContent='✓ Copied';setTimeout(()=>b.textContent='Copy Brief',1800);});
+}
+
+function buildChart(){
+  const svg=document.getElementById('trendChart');if(!svg)return;
+  const W=900,H=220,pL=55,pR=20,pT=18,pB=40;
+  const cW=W-pL-pR,cH=H-pT-pB,n=weeks.length;
+  const maxS=Math.max(...weeks.map(w=>Math.max(w.sales,w.target)))*1.1;
+  const maxE=Math.max(...weeks.map(w=>Math.max(w.effActual,w.effTarget)))*1.1;
+  const x=i=>pL+(i/(n-1))*cW;
+  const yS=v=>pT+cH-(v/maxS)*cH;
+  const yE=v=>pT+cH-(v/maxE)*cH;
+  let h='';
+  for(let i=0;i<=4;i++){const y=pT+(i/4)*cH;const v=Math.round(maxS*(1-i/4)/1000);
+    h+=`<line x1="${pL}" y1="${y}" x2="${W-pR}" y2="${y}" stroke="#e8e6e0" stroke-width="1"/>`;
+    h+=`<text x="${pL-6}" y="${y+4}" text-anchor="end" font-size="10" fill="#9a9a9a" font-family="Helvetica Neue,sans-serif">$${v}k</text>`;}
+  const tPath=weeks.map((w,i)=>`${i===0?'M':'L'}${x(i)},${yS(w.target)}`).join(' ');
+  h+=`<path d="${tPath} L${x(n-1)},${H-pB} L${x(0)},${H-pB} Z" fill="rgba(200,199,192,0.15)"/>`;
+  h+=`<path d="${tPath}" fill="none" stroke="#c8c7c0" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+  const aPath=weeks.map((w,i)=>`${i===0?'M':'L'}${x(i)},${yS(w.sales)}`).join(' ');
+  h+=`<path d="${aPath}" fill="none" stroke="#1a1a1a" stroke-width="2.5"/>`;
+  const ePath=weeks.map((w,i)=>`${i===0?'M':'L'}${x(i)},${yE(w.effActual)}`).join(' ');
+  h+=`<path d="${ePath}" fill="none" stroke="#2d9e5f" stroke-width="1.5" stroke-dasharray="2,3"/>`;
+  weeks.forEach((w,i)=>{const px=x(i),py=yS(w.sales);const cc=w.pct>=100?'#2d9e5f':w.pct>=75?'#e07b2a':'#d94040';
+    h+=`<circle cx="${px}" cy="${py}" r="4.5" fill="${cc}" stroke="white" stroke-width="1.5"/>`;
+    h+=`<text x="${px}" y="${H-pB+14}" text-anchor="middle" font-size="10" fill="#6b6b6b" font-family="Helvetica Neue,sans-serif" font-weight="600">${w.id}</text>`;});
+  svg.innerHTML=h;
+}
+
+function buildWeeklyTab(){
+  const f=document.getElementById('week-filters');
+  const v=document.getElementById('weekly-detail-view');
+  weeks.forEach((w,i)=>{
+    const b=document.createElement('button');
+    b.className='filter-btn'+(i===0?' active':'');
+    b.textContent=w.id;
+    b.onclick=()=>{document.querySelectorAll('#week-filters .filter-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+      v.innerHTML=`<div class="detail-panel visible">${buildDetailHTML(w)}</div>`;};
+    f.appendChild(b);});
+  v.innerHTML=`<div class="detail-panel visible">${buildDetailHTML(weeks[0])}</div>`;
+}
+
+function buildChannels(){
+  const defs=[
+    {key:'challenger',name:'Challenger',color:'#2563eb'},
+    {key:'harvey',name:'Harvey Norman',color:'#7c3aed'},
+    {key:'courts',name:'Courts',color:'#0891b2'},
+    {key:'taka',name:'Takashimaya',color:'#d97706'},
+    {key:'sprint',name:'Sprint Cass',color:'#059669'},
+  ];
+  const g=document.getElementById('channel-grid');
+  defs.forEach(ch=>{
+    const wksData=weeks.filter(w=>w.channels[ch.key]!==undefined);
+    const maxV=Math.max(...wksData.map(w=>w.channels[ch.key][0]),1);
+    const tot=wksData.reduce((s,w)=>s+w.channels[ch.key][0],0);
+    const totT=wksData.reduce((s,w)=>s+w.channels[ch.key][1],0);
+    const op=Math.round(tot/totT*100);const oc=colorClass(op);
+    const rows=wksData.map(w=>{
+      const v=w.channels[ch.key][0],t=w.channels[ch.key][1];
+      const p=Math.round(v/t*100);const pc=colorClass(p);
+      const bw=Math.round((v/maxV)*100);
+      const pc2=pc==='green'?'var(--green)':pc==='orange'?'var(--orange)':'var(--red)';
+      return`<div class="channel-week-row"><span class="cwk">${w.id}</span><div class="cbar-wrap"><div class="cbar" style="width:${bw}%;background:${ch.color}"></div></div><span class="cval">${fmtK(v)}</span><span class="cpct" style="color:${pc2}">${p}%</span></div>`;
+    }).join('');
+    const c=document.createElement('div');c.className='channel-card';
+    c.innerHTML=`<div class="channel-name" style="color:${ch.color}">${ch.name}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:17px;font-weight:700;letter-spacing:-0.4px">${fmtK(tot)}</div>
+        <span class="badge ${oc}">${op}% overall</span>
+      </div>${rows}`;
+    g.appendChild(c);});
+}
+
+function buildPromoterLB(i){
+  const w=weeks[i];
+  document.getElementById('promoter-lb').innerHTML=`
+    <div class="lb-card">
+      <div class="lb-header">Top Sales <span class="sub">${w.id}</span></div>
+      ${w.topSales.map((s,j)=>`<div class="lb-row"><div class="lb-rank ${j===0?'gold':j===1?'silver':'bronze'}">${j+1}</div><div><div class="lb-name">${s.name}</div><div class="lb-store">${s.loc}</div></div><div class="lb-value">${s.val}</div></div>`).join('')}
+    </div>
+    <div class="lb-card">
+      <div class="lb-header">Top Efficiency <span class="sub">${w.id} $/hr</span></div>
+      ${w.topEff.map((s,j)=>`<div class="lb-row"><div class="lb-rank ${j===0?'gold':j===1?'silver':'bronze'}">${j+1}</div><div><div class="lb-name">${s.name}</div><div class="lb-store">${s.loc}</div></div><div class="lb-value">${s.val}</div></div>`).join('')}
+    </div>`;
+}
+
+function buildPromoterFilters(){
+  const f=document.getElementById('promoter-filters');
+  weeks.forEach((w,i)=>{
+    const b=document.createElement('button');b.className='filter-btn'+(i===0?' active':'');b.textContent=w.id;
+    b.onclick=()=>{document.querySelectorAll('#promoter-filters .filter-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');buildPromoterLB(i);};
+    f.appendChild(b);});
+  buildPromoterLB(0);
+}
+
+function buildInsights(){
+  const ins=[
+    {icon:'🏆',title:'W4 was the campaign peak — single activation, massive lift',body:'Takashimaya delivered $96k of W4\'s $144k total. Javier Law and Rui Sian Chong both crossed $18k. Event-format activations at major malls are TC\'s most potent sales mechanism — plan at least 2 in Q2.'},
+    {icon:'🏬',title:'HN Millenia Walk = the campaign\'s most reliable high-efficiency store',body:'Appeared in top 3 effective stores in 7 of 10 weeks. W10 hit $1,682/hr — highest single-day store efficiency in the campaign. This location should anchor every deployment plan.'},
+    {icon:'📉',title:'Courts is a structural underperformer — needs urgent review',body:'$0 in W5 and W8. Under $500 in W2 and W6 despite $6–13k weekly targets. This is not traffic noise — it\'s a coverage or product availability gap. Escalate to channel manager before Q2.'},
+    {icon:'⚡',title:'Effectiveness $/hr is the leading indicator — track it daily',body:'Weeks where $/hr beat target (W1, W4, W5, W10) all hit ≥87% sales attainment. W9\'s $75.23/hr predicted the worst sales week. Build daily effectiveness alerts into the reporting rhythm.'},
+    {icon:'🧑‍💼',title:'Javier Law and Eugene Tan are the BA benchmarks',body:'Javier Law: $18,941 and $1,515/hr in W4. Eugene Tan: $14,303 and $1,682/hr in W10. Both are outlier performers worth profiling as coaching references for the wider team.'},
+    {icon:'🔁',title:'Zero-duty promoters are a weekly drag — 4 to 11 per week',body:'Every week had 4–11 promoters logging zero sales duty. W4 and W6 had 11 each. Before Q2, audit whether this is scheduling, coverage rotation, or genuine deployment gaps driving the pattern.'},
+    {icon:'🔋',title:'Sprint Cass is consistent — expand it',body:'Sprint Cass (activated W5) delivered near or above target in W5, W8, and W9. Lionel Khoo is its standout BA. With a small footprint already performing, expanding Sprint Cass coverage is low-risk, high-upside.'},
+    {icon:'📈',title:'W9 → W10 is the sharpest recovery in the dataset',body:'W9 hit 57% / $75.23/hr. W10 bounced to 112% / $163.96/hr — an 87-point swing in attainment in one week. Understand what changed operationally (activation? staffing? product push?) and encode it as a playbook.'},
+    {icon:'📊',title:'Harvey Norman is TC\'s highest-value retail partner',body:'HN Millenia Walk, Parkway Parade, Northpoint, and West Gate drove the largest channel share across the campaign. W10 HN alone: $48,707 vs $31k target. Deepening the HN relationship is the single highest-return retail investment.'},
+  ];
+  document.getElementById('insights-grid').innerHTML=ins.map(i=>`<div class="insight-card"><div class="insight-icon">${i.icon}</div><div class="insight-title">${i.title}</div><div class="insight-body">${i.body}</div></div>`).join('');
+
+  document.getElementById('am-brief').textContent=`TC Acoustic SG — Q1 W1–W10 Campaign Intelligence Brief
+For: Account Manager Review · Data: Q1 W1–W10 (6 Jan – 16 Mar 2025)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CAMPAIGN HEADLINE
+Total Sales:           $743,409 (W1–W10 cumulative)
+Average Attainment:    84.4% of weekly targets
+Average Effectiveness: $134.67/hr vs varied weekly benchmarks
+Peak Week:             W4 at $144,049 (87% of $165k — Taka activation)
+Best Attainment Week:  W5 at 120% ($87,283 vs $73k)
+Worst Week:            W9 at 57% ($43,797 vs $77k, $75.23/hr)
+Weeks ≥100%:           W1, W5, W10 (confirmed), W4 (event-driven)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOP PERFORMERS — CAMPAIGN-WIDE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Best BA by Sales:       Javier Law — $18,941 in W4 at Takashimaya
+Best BA by Efficiency:  Eugene Tan — $1,682.71/hr in W10 at HN Millenia Walk
+Consistent Performers:  Damien Wong (HN Northpoint), Ong Li Ying (HN West Gate),
+                        George Sim (HN Parkway Parade), Lionel Khoo (Sprint Cass T2)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANNEL HEALTH SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Harvey Norman:    Campaign's highest-value channel. W10 alone: $48,707 vs $31k target.
+                  HN Millenia Walk in top 3 effective stores in 7 of 10 weeks.
+Challenger:       Consistent contributor. Generally 70–100% of weekly target.
+Takashimaya:      Event-driven spikes (W4: $96k). Regular weeks softer.
+Sprint Cass:      New channel from W5. Near/above target in W5, W8, W9. Low risk, high upside.
+Courts:           🔴 RED FLAG — $0 in W5 and W8. Under $500 in W2 and W6.
+                  Structural coverage gap requiring immediate channel manager review.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACTION ITEMS FOR Q2
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Plan ≥2 Taka-style activation events in Q2 — W4 proved the format works
+2. Audit Courts deployment — BA presence, shelf availability, and traffic profile
+3. Anchor HN Millenia Walk in every deployment plan — it's the campaign's most
+   reliable high-efficiency location
+4. Profile Javier Law and Eugene Tan as coaching benchmarks for the BA team
+5. Introduce daily $/hr effectiveness tracking — it predicts weekly outcomes
+   better than raw sales monitoring
+6. Investigate zero-duty promoter patterns — recurring 4–11 person drag each week
+7. Expand Sprint Cass coverage — 3 consecutive near-target weeks with small footprint
+8. Debrief W9→W10 recovery — understand what changed operationally and encode it
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DATA NOTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Generated from 10 weekly BA update images (W1–W10) showing end-of-week Sunday
+or Saturday WTD snapshots. W2 % (51%) likely reflects a mid-week cut, not EOW.
+Verify with source data before external presentation.`;
+}
+
+function copyBrief(e){
+  const el=document.getElementById('am-brief');if(!el)return;
+  navigator.clipboard.writeText(el.innerText).then(()=>{const b=e.target;b.textContent='✓ Copied';setTimeout(()=>b.textContent='Copy Brief',1800);});
+}
+
+function showTab(id,btn){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.subnav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  buildWeekCards();buildChart();buildWeeklyTab();buildChannels();buildPromoterFilters();buildInsights();
+});
+</script>
+</body>
+</html>
